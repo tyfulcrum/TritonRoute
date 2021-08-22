@@ -35,6 +35,7 @@
 #include <boost/geometry/algorithms/covered_by.hpp>
 #include <boost/geometry/geometries/register/point.hpp>
 #include <boost/geometry/geometries/register/box.hpp>
+#include <boost/geometry.hpp>
 
 namespace bgi = boost::geometry::index;
 
