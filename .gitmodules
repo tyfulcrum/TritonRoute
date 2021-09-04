@@ -1,0 +1,3 @@
+[submodule "libs/uastar"]
+	path = libs/uastar
+	url = https://github.com/tyfulcrum/uastar
