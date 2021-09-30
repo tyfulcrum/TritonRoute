@@ -40,7 +40,7 @@ void FlexGridGraph::initGrids(const map<frCoord, map<frLayerNum, frTrackPattern*
                               const map<frLayerNum, frPrefRoutingDirEnum> &zMap,
                               bool followGuide) {
   //bool enableOutput = true;
-  bool enableOutput = false;
+  bool enableOutput = true;
   // initialize coord vectors
   xCoords.clear();
   yCoords.clear();

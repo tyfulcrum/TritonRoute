@@ -2105,7 +2105,7 @@ void FlexDRWorker::route_queue() {
 void FlexDRWorker::route_queue_main(queue<RouteQueueEntry> &rerouteQueue) {
   auto &workerRegionQuery = getWorkerRegionQuery();
   while (!rerouteQueue.empty()) {
-    // cout << "rerouteQueue size = " << rerouteQueue.size() << endl;
+    cout << "rerouteQueue size = " << rerouteQueue.size() << endl;
     auto& entry = rerouteQueue.front();
     frBlockObject* obj = entry.block;
     bool doRoute = entry.doRoute;
@@ -2943,14 +2943,20 @@ void FlexDRWorker::routeNet_prepAreaMap(drNet* net, map<FlexMazeIdx, frCoord> &a
 bool FlexDRWorker::routeNet(drNet* net) {
   ProfileTask profile("DR:routeNet");
   //bool enableOutput = true;
-  bool enableOutput = false;
+  bool enableOutput = true;
   if (net->getPins().size() <= 1) {
     return true;
   }
   
   if (TEST || enableOutput) {
     cout <<"route " <<net->getFrNet()->getName() <<endl;
+    cout << "FrNetTerms.size: " << net->getFrNetTerms().size() << endl;
+    cout << "net size: " << sizeof(*net) << endl;
   }
+
+  frMIdx x, y, z;
+  gridGraph.getDim(x, y, z);
+  cout << "Grid Graph Size: " << x << "," <<y << "," << z << endl;
 
   set<drPin*, frBlockObjectComp> unConnPins;
   map<FlexMazeIdx, set<drPin*, frBlockObjectComp> > mazeIdx2unConnPins;
@@ -2974,7 +2980,7 @@ bool FlexDRWorker::routeNet(drNet* net) {
     mazePinInit();
     auto nextPin = routeNet_getNextDst(ccMazeIdx1, ccMazeIdx2, mazeIdx2unConnPins);
     path.clear();
-    if (gridGraph.search(connComps, nextPin, path, ccMazeIdx1, ccMazeIdx2, centerPt)) {
+    if (gridGraph.cuSearch(connComps, nextPin, path, ccMazeIdx1, ccMazeIdx2, centerPt)) {
       routeNet_postAstarUpdate(path, connComps, unConnPins, mazeIdx2unConnPins, isFirstConn);
       routeNet_postAstarWritePath(net, path, realPinAPMazeIdx/*, apSVia*/);
       routeNet_postAstarPatchMinAreaVio(net, path, areaMap);

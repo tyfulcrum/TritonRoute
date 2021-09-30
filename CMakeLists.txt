@@ -50,6 +50,7 @@ find_package(VTune)
 ## uastar
 find_package(CUDA REQUIRED)
 find_package(Boost COMPONENTS program_options system filesystem REQUIRED)
+find_package(fmt)
 
 set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -lineinfo -gencode arch=compute_35,code=sm_35 --ptxas-options -v )
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -rdynamic -Wall -DDEBUG -fsanitize=address")
@@ -59,38 +60,31 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 include_directories(libs/uastar/libs/moderngpu/include)
 include_directories(libs/uastar/libs/bitmap)
 include_directories(libs/uastar/src)
+include_directories(src/)
 include_directories(${Boost_INCLUDE_DIRS})
 link_directories(${Boost_LIBRARY_DIRS})
 
+set(UASTAR_HOME
+  ${PROJECT_SOURCE_DIR}/libs/uastar/src
+)
 set(
     moderngpu_source
     libs/uastar/libs/moderngpu/src/mgpucontext.cu
     libs/uastar/libs/moderngpu/src/mgpuutil.cpp
 )
 
-cuda_add_executable(
+cuda_add_library(
     uastar
-    libs/uastar/src/main.cpp
-    libs/uastar/src/pathway/pathway.cpp
-    libs/uastar/src/pathway/CPU-solver.cpp
     libs/uastar/src/pathway/GPU-solver.cu
-    libs/uastar/src/pathway/input/custom.cpp
-    libs/uastar/src/pathway/input/zigzag.cpp
-    libs/uastar/src/puzzle/puzzle.cu
-    libs/uastar/src/puzzle/database.cpp
-    ${moderngpu_source}
-)
-
-cuda_add_executable(
-    demo-sort
-    utils/modern-sort.cu
     ${moderngpu_source}
 )
 
 target_link_libraries(
-    uastar
-    ${Boost_LIBRARIES}
-)
+  uastar
+  ${Boost_LIBRARIES}
+  fmt::fmt
+  )
+
 set (FLEXROUTE_SRC
   ${FLEXROUTE_HOME}/src/dr/FlexDR_conn.cpp
   ${FLEXROUTE_HOME}/src/dr/FlexDR_init.cpp
@@ -223,6 +217,7 @@ set_target_properties( flexroutelib
 target_include_directories( flexroutelib
   PUBLIC
   ${FLEXROUTE_HOME}/src
+  ${UASTAR_HOME}
 )
 
 target_link_libraries( flexroutelib
@@ -252,6 +247,7 @@ endif()
 
 target_link_libraries( TritonRoute
   PUBLIC
+  uastar
   flexroutelib
   )
 

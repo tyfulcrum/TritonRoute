@@ -579,9 +579,11 @@ namespace fr {
     }
     // unsafe access, no idx check
     void setDst(frMIdx x, frMIdx y, frMIdx z) {
+      std::cout << "set dst: (" << x << "," << y << "," <<z << ")" << std::endl;
       dsts[getIdx(x, y, z)] = 1;
     }
     void setDst(const FlexMazeIdx &mi) {
+      std::cout << "set dst: (" << mi.x() << "," << mi.y() << "," << mi.z() << ")" << std::endl;
       dsts[getIdx(mi.x(), mi.y(), mi.z())] = 1;
     }
     // unsafe access
@@ -727,6 +729,8 @@ namespace fr {
     void resetSrc();
     void resetDst();
     bool search(std::vector<FlexMazeIdx> &connComps, drPin* nextPin, std::vector<FlexMazeIdx> &path,
+                FlexMazeIdx &ccMazeIdx1, FlexMazeIdx &ccMazeIdx2, const frPoint &centerPt);
+    bool cuSearch(std::vector<FlexMazeIdx> &connComps, drPin* nextPin, std::vector<FlexMazeIdx> &path,
                 FlexMazeIdx &ccMazeIdx1, FlexMazeIdx &ccMazeIdx2, const frPoint &centerPt);
     void setCost(frUInt4 drcCostIn, frUInt4 markerCostIn) {
       ggDRCCost    = drcCostIn;
