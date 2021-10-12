@@ -30,6 +30,7 @@
 #include "dr/FlexGridGraph.h"
 #include "dr/FlexDR.h"
 #include "pathway/GPU-solver.hpp"
+#include <fmt/core.h>
 
 using namespace std;
 using namespace fr;
@@ -190,6 +191,14 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //  }
   //}
   // N
+  // auto gpuSolver = GPUPathwaySolver(&currGrid, this);
+  // gpuSolver.initialize(bits);
+  // fmt::print("\nCPU knows bits[0]: {}\n", bits[0]);
+  
+  /*
+  bool dirn = isExpandable(currGrid, frDirEnum::N);
+  bool cuDirn = gpuSolver.cuIsExpanable(frDirEnum::N);
+  */
   if (isExpandable(currGrid, frDirEnum::N)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() + 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -700,8 +709,6 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
   getDim(xDim, yDim, zDim);
 
 
-  auto gpuSolver = GPUPathwaySolver(this);
-  gpuSolver.initialize();
 
   FlexMazeIdx dstMazeIdx1(xDim - 1, yDim - 1, zDim - 1);
   FlexMazeIdx dstMazeIdx2(0, 0, 0);
@@ -745,6 +752,7 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       cout <<"src add to wavefront (" <<idx.x() <<", " <<idx.y() <<", " <<idx.z() <<")" <<endl;
     }
   }
+    bool goon = true;
   while(!wavefront.empty()) {
     auto currGrid = wavefront.top();
     wavefront.pop();
@@ -752,6 +760,20 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       continue;
     }
 
+    if (goon) {
+      auto gpu = GPUPathwaySolver();
+      gpu.initialize(bits, prevDirs, srcs, guides, zDirs, 
+          xCoords.size(), yCoords.size(), zCoords.size());
+      auto x = 2;
+      auto z = 2;
+      auto y = 2;
+      auto dir = frDirEnum::N;
+      auto gpures = gpu.testDir(2, 2, 2);
+      auto cpures = getPrevAstarNodeDir(2, 2, 2);
+      fmt::print("GPU prevD result: {}\n", gpures);
+      fmt::print("CPU prevD result: {}\n",  cpures);
+      goon = false;
+    }
     // test
     if (enableOutput) {
       ++stepCnt;

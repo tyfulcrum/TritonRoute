@@ -38,15 +38,16 @@
 #include <boost/geometry/geometries/point_xy.hpp>
 #include <boost/geometry/geometries/box.hpp>
 #include <boost/geometry/geometries/segment.hpp>
+#include <frCoreLangTypes.h>
 
 namespace fr {
-  using frLayerNum = int;
-  using frCoord = int;
-  using frUInt4 = unsigned int;
-  using frDist  = double;
+  using frLayerNum = coret::frLayerNum;
+  using frCoord = coret::frCoord;
+  using frUInt4 = coret::frUInt4;
+  using frDist  = coret::frDist;
   using frString = std::string;
-  using frCost = unsigned int;
-  using frMIdx = int; // negative value expected 
+  using frCost = coret::frCost;
+  using frMIdx = coret::frMIdx; // negative value expected 
   template <typename T>
   using frCollection = std::vector<T>;
   template <typename T>
@@ -210,7 +211,8 @@ namespace fr {
   };
 
   #define OPPOSITEDIR 7 // used in FlexGC_main.cpp
-  enum class frDirEnum { UNKNOWN = 0, D = 1, S = 2, W = 3, E = 4, N = 5, U = 6 };
+
+  using frDirEnum =  coret::frDirEnum;
 
   enum class frLayerTypeEnum {
     CUT,

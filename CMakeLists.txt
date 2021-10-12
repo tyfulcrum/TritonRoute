@@ -54,7 +54,7 @@ find_package(fmt)
 
 set(CUDA_NVCC_FLAGS_DEBUG ${CUDA_NVCC_FLAGS_DEBUG} -lineinfo -gencode arch=compute_35,code=sm_35 --ptxas-options -v )
 set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -rdynamic -Wall -DDEBUG -fsanitize=address")
-set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS_RELEASE} -O2 -gencode arch=compute_35,code=sm_35 --ptxas-options -v)
+set(CUDA_NVCC_FLAGS_RELEASE ${CUDA_NVCC_FLAGS_RELEASE} -O2 -gencode arch=compute_75,code=sm_75 --ptxas-options -v)
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
 include_directories(libs/uastar/libs/moderngpu/include)
