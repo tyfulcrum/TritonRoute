@@ -199,6 +199,24 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   bool dirn = isExpandable(currGrid, frDirEnum::N);
   bool cuDirn = gpuSolver.cuIsExpanable(frDirEnum::N);
   */
+  frMIdx gridX = currGrid.x();
+  frMIdx gridY = currGrid.y();
+  frMIdx gridZ = currGrid.z();
+  if (gridX == 36 && gridY == 31 && gridZ == 1) {
+    auto gpu = GPUPathwaySolver();
+    gpu.initialize(bits, prevDirs, srcs, guides, zDirs, 
+        xCoords.size(), yCoords.size(), zCoords.size());
+    auto dir = currGrid.getLastDir();
+    auto gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+    auto cpures = isExpandable(currGrid, frDirEnum::S);
+    fmt::print("GPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ, gpures);
+    fmt::print("CPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ,  cpures);
+  }
+  /*
+  fmt::print("\n");
+  fmt::print("({}, {}, {}) ", gridX, gridY, gridZ);
+  fmt::print("\n");
+  */
   if (isExpandable(currGrid, frDirEnum::N)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() + 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -760,6 +778,7 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       continue;
     }
 
+    /*
     if (goon) {
       auto gpu = GPUPathwaySolver();
       gpu.initialize(bits, prevDirs, srcs, guides, zDirs, 
@@ -768,12 +787,13 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       auto z = 2;
       auto y = 2;
       auto dir = frDirEnum::N;
-      auto gpures = gpu.testDir(2, 2, 2);
+      auto gpures = gpu.isEx(2, 2, 2, dir);
       auto cpures = getPrevAstarNodeDir(2, 2, 2);
       fmt::print("GPU prevD result: {}\n", gpures);
       fmt::print("CPU prevD result: {}\n",  cpures);
       goon = false;
     }
+    */
     // test
     if (enableOutput) {
       ++stepCnt;
