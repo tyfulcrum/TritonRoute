@@ -202,17 +202,36 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   frMIdx gridX = currGrid.x();
   frMIdx gridY = currGrid.y();
   frMIdx gridZ = currGrid.z();
+  auto dir = frDirEnum::N;
+  getNextGrid(gridX, gridY, gridZ, dir);
+  
+  FlexMazeIdx nextIdx(gridX, gridY, gridZ);
+  auto gpu = GPUPathwaySolver();
+  gpu.initialize(bits, prevDirs, srcs, guides, zDirs, xCoords, yCoords, zCoords,
+      zHeights, xCoords.size(), yCoords.size(), zCoords.size());
+  auto d_estc = gpu.test_estcost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+  auto estc = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+  if (d_estc == estc) {
+    fmt::print("GPU EstCost: {} in ({}, {}, {}) SUCCESS!\n", d_estc,  gridX, gridY, gridZ);
+  }
+  /*
   if (gridX == 36 && gridY == 31 && gridZ == 1) {
     auto gpu = GPUPathwaySolver();
-    gpu.initialize(bits, prevDirs, srcs, guides, zDirs, 
-        xCoords.size(), yCoords.size(), zCoords.size());
+    gpu.initialize(bits, prevDirs, srcs, guides, zDirs, xCoords, yCoords, zCoords,
+        zHeights, xCoords.size(), yCoords.size(), zCoords.size());
+    auto d_estc = gpu.test_estcost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+    auto estc = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+    if (d_estc == estc) {
+      fmt::print("GPU EstCost in ({}, {}, {}) SUCCESS!\n", gridX, gridY, gridZ);
+    }
+    fmt::print("GPU EstCost result: {}\n", d_estc);
+    fmt::print("CPU EstCost result: {}\n", estc);
     auto dir = currGrid.getLastDir();
     auto gpures = gpu.isEx(gridX, gridY, gridZ, dir);
     auto cpures = isExpandable(currGrid, frDirEnum::S);
     fmt::print("GPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ, gpures);
     fmt::print("CPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ,  cpures);
   }
-  /*
   fmt::print("\n");
   fmt::print("({}, {}, {}) ", gridX, gridY, gridZ);
   fmt::print("\n");
@@ -303,6 +322,7 @@ frCost FlexGridGraph::getEstCost(const FlexMazeIdx &src, const FlexMazeIdx &dstM
   getNextGrid(gridX, gridY, gridZ, dir);
   frPoint nextPoint;
   getPoint(nextPoint, gridX, gridY);
+
   // avoid propagating to location that will cause fobidden via spacing to boundary pin
   if (DBPROCESSNODE == "GF14_13M_3Mx_2Cx_4Kx_2Hx_2Gx_LB") {
     if (drWorker && drWorker->getDRIter() >= 30 && drWorker->getRipupMode() == 0) {

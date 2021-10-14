@@ -57,27 +57,13 @@ namespace fr {
   template <typename T>
   using frListIter   = typename std::list<T>::iterator;
 
-  enum frOrientEnum {
-      frcR0       = 0, // N
-      frcR90      = 1, // W
-      frcR180     = 2, // S
-      frcR270     = 3, // E
-      frcMY       = 4, // FN
-      frcMXR90    = 5, // FW
-      frcMX       = 6, // FS
-      frcMYR90    = 7  // FE
-  };
+  using frOrientEnum = coret::frOrientEnum;
   enum frEndStyleEnum {
       frcTruncateEndStyle = 0, // ext = 0
       frcExtendEndStyle   = 1, // ext = half width
       frcVariableEndStyle = 2  // ext = variable
   };
-  enum frPrefRoutingDirEnum {
-      frcNotApplicablePrefRoutingDir = 0,
-      frcNonePrefRoutingDir          = 1,
-      frcHorzPrefRoutingDir          = 2,
-      frcVertPrefRoutingDir          = 3 
-  };
+  using frPrefRoutingDirEnum = coret::frPrefRoutingDirEnum;
   enum frBlockObjectEnum {
       frcNet,
       frcTerm,

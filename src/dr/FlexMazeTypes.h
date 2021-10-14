@@ -29,37 +29,45 @@
 #ifndef _FLEX_MAZE_TYPES_H_
 #define _FLEX_MAZE_TYPES_H_
 
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
+#include <frCoreLangTypes.h>
+using coret::frMIdx;
+
 namespace fr {
   class FlexMazeIdx {
   public:
-    FlexMazeIdx(): xIdx(-1), yIdx(-1), zIdx(-1) {}
-    FlexMazeIdx(frMIdx xIn, frMIdx yIn, frMIdx zIn): xIdx(xIn), yIdx(yIn), zIdx(zIn) {}
+    CUDA_CALLABLE_MEMBER FlexMazeIdx(): xIdx(-1), yIdx(-1), zIdx(-1) {}
+    CUDA_CALLABLE_MEMBER FlexMazeIdx(frMIdx xIn, frMIdx yIn, frMIdx zIn): xIdx(xIn), yIdx(yIn), zIdx(zIn) {}
     // getters
-    frMIdx x() const {
+    CUDA_CALLABLE_MEMBER frMIdx x() const {
       return xIdx;
     }
-    frMIdx y() const {
+    CUDA_CALLABLE_MEMBER frMIdx y() const {
       return yIdx;
     }
-    frMIdx z() const {
+    CUDA_CALLABLE_MEMBER frMIdx z() const {
       return zIdx;
     }
-    bool empty() const {
+    CUDA_CALLABLE_MEMBER bool empty() const {
       return (xIdx == -1 && yIdx == -1 && zIdx == -1);
     }
     // setters
-    void set(frMIdx xIn, frMIdx yIn, frMIdx zIn) {
+    CUDA_CALLABLE_MEMBER void set(frMIdx xIn, frMIdx yIn, frMIdx zIn) {
       xIdx = xIn;
       yIdx = yIn;
       zIdx = zIn;
     }
-    void set(const FlexMazeIdx &in) {
+    CUDA_CALLABLE_MEMBER void set(const FlexMazeIdx &in) {
       xIdx = in.x();
       yIdx = in.y();
       zIdx = in.z();
     }
     // others
-    bool operator<(const FlexMazeIdx &rhs) const {
+    CUDA_CALLABLE_MEMBER bool operator<(const FlexMazeIdx &rhs) const {
       if (this->xIdx != rhs.x()) {
         return this->xIdx < rhs.x();
       } else if (this->yIdx != rhs.y()) {
@@ -68,11 +76,11 @@ namespace fr {
         return this->zIdx < rhs.z();
       }
     }
-    bool operator==(const FlexMazeIdx &rhs) const {
+    CUDA_CALLABLE_MEMBER bool operator==(const FlexMazeIdx &rhs) const {
       return (xIdx == rhs.xIdx && yIdx == rhs.yIdx && zIdx == rhs.zIdx);
     }
 
-    friend std::ostream& operator<<(std::ostream& os, const FlexMazeIdx &mIdx) {
+    CUDA_CALLABLE_MEMBER friend std::ostream& operator<<(std::ostream& os, const FlexMazeIdx &mIdx) {
       os <<"(" <<mIdx.x() <<", " <<mIdx.y() <<", " <<mIdx.z() <<")";
       return os;
     }

@@ -30,15 +30,26 @@
 #define _FR_ORIENT_H_
 
 #include "frBaseTypes.h"
+using namespace coret;
 
 namespace fr {
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
   class frOrient {
   public:
     // constructor
-    frOrient(): orient(frcR0) {}
-    frOrient(const frOrient &tmpOrient): orient(tmpOrient.orient) {}
-    frOrient(frOrientEnum tmpOrient): orient(tmpOrient) {}
-    frOrient(const frString &name) {
+    CUDA_CALLABLE_MEMBER frOrient(): orient(frcR0) {}
+    CUDA_CALLABLE_MEMBER frOrient(const frOrient &tmpOrient): orient(tmpOrient.orient) {}
+    CUDA_CALLABLE_MEMBER frOrient(frOrientEnum tmpOrient): orient(tmpOrient) {}
+#ifdef __CUDACC__
+    CUDA_CALLABLE_MEMBER frOrient(const char *name) {
+      set(name);
+    }
+
+    CUDA_CALLABLE_MEMBER void set(const char *name) {
       if (name == frString("frcR90")) {
         orient = frcR90;
       } else if (name == frString("frcR180")) {
@@ -56,6 +67,59 @@ namespace fr {
       } else {
         orient = frcR0;
       }
+    }
+    CUDA_CALLABLE_MEMBER char *getName() const {
+      switch(orient) {
+        //case frcR0    : return frString("frcR0");
+        case frcR90   : return "frcR90";
+        case frcR180  : return "frcR180";
+        case frcR270  : return "frcR270";
+        case frcMY    : return "frcMY";
+        case frcMYR90 : return "frcMYR90";
+        case frcMX    : return "frcMX";
+        case frcMXR90 : return "frcMXR90";
+        default       : return "frcR0";
+      }
+    }
+    CUDA_CALLABLE_MEMBER void getName(char *name) const {
+      switch(orient) {
+        //case frcR0    : return frString("frcR0");
+        case frcR90   : 
+          name = "frcR90";
+          break;
+        case frcR180  : 
+          name = "frcR180";
+          break;
+        case frcR270  : 
+          name = "frcR270";
+          break;
+        case frcMY    : 
+          name = "frcMY";
+          break;
+        case frcMYR90 : 
+          name = "frcMYR90";
+          break;
+        case frcMX    : 
+          name = "frcMX";
+          break;
+        case frcMXR90 : 
+          name = "frcMXR90";
+          break;
+        default       : 
+          name = "frcR0";
+      }
+    }
+    CUDA_CALLABLE_MEMBER int cuStrcmp(const char *s1, const char *s2) {
+      while(*s1 && (*s1 == *s2))
+      {
+        s1++;
+        s2++;
+      }
+      return *(const unsigned char*)s1 - *(const unsigned char*)s2;
+    }
+#else
+    frOrient(const frString &name) {
+      set(name);
     }
     // setters
     void set(frOrientEnum tmpOrient) {
@@ -128,6 +192,7 @@ namespace fr {
           name = "frcR0";
       }
     }
+#endif
     // overloads
     //frOrientEnum operator()() const {
     //  return orient;

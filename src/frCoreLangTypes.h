@@ -16,6 +16,22 @@ namespace coret {
   using frCost = unsigned int;
   using frMIdx = int; // negative value expected 
   enum class frDirEnum { UNKNOWN = 0, D = 1, S = 2, W = 3, E = 4, N = 5, U = 6 };
+  enum frOrientEnum {
+      frcR0       = 0, // N
+      frcR90      = 1, // W
+      frcR180     = 2, // S
+      frcR270     = 3, // E
+      frcMY       = 4, // FN
+      frcMXR90    = 5, // FW
+      frcMX       = 6, // FS
+      frcMYR90    = 7  // FE
+  };
+  enum frPrefRoutingDirEnum {
+      frcNotApplicablePrefRoutingDir = 0,
+      frcNonePrefRoutingDir          = 1,
+      frcHorzPrefRoutingDir          = 2,
+      frcVertPrefRoutingDir          = 3 
+  };
   class cuWavefrontGrid {
     public:
       cuWavefrontGrid(): xIdx(-1), yIdx(-1), zIdx(-1), pathCost(0), cost(0), layerPathArea(0), 

@@ -34,42 +34,47 @@
 #include <iostream>
 
 namespace fr {
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
   class frTransform {
   public:
     // constructor
-    frTransform(): offset(), ori() {}
-    frTransform(const frPoint &pointIn, const frOrient &orientIn = frOrient(frcR0)): offset(pointIn), ori(orientIn) {}
-    frTransform(frCoord xOffsetIn, frCoord yOffsetIn, const frOrient &orientIn = frOrient(frcR0)): offset(xOffsetIn, yOffsetIn), ori(orientIn) {}
+    CUDA_CALLABLE_MEMBER frTransform(): offset(), ori() {}
+    CUDA_CALLABLE_MEMBER frTransform(const frPoint &pointIn, const frOrient &orientIn = frOrient(frcR0)): offset(pointIn), ori(orientIn) {}
+    CUDA_CALLABLE_MEMBER frTransform(frCoord xOffsetIn, frCoord yOffsetIn, const frOrient &orientIn = frOrient(frcR0)): offset(xOffsetIn, yOffsetIn), ori(orientIn) {}
     // setters
-    void set(const frPoint &pointIn) {
+    CUDA_CALLABLE_MEMBER void set(const frPoint &pointIn) {
       offset = pointIn;
     }
-    void set(const frOrient &orientIn) {
+    CUDA_CALLABLE_MEMBER void set(const frOrient &orientIn) {
       ori = orientIn;
     }
-    void set(const frPoint &pointIn, const frOrient &orientIn) {
+    CUDA_CALLABLE_MEMBER void set(const frPoint &pointIn, const frOrient &orientIn) {
       set(pointIn);
       set(orientIn);
     }
-    void set(frCoord xOffsetIn, frCoord yOffsetIn) {
+    CUDA_CALLABLE_MEMBER void set(frCoord xOffsetIn, frCoord yOffsetIn) {
       set(frPoint(xOffsetIn, yOffsetIn));
     }
-    void set(frCoord xOffsetIn, frCoord yOffsetIn, const frOrient &orientIn) {
+    CUDA_CALLABLE_MEMBER void set(frCoord xOffsetIn, frCoord yOffsetIn, const frOrient &orientIn) {
       set(xOffsetIn, yOffsetIn);
       set(orientIn);
     }
     // getters
-    frCoord xOffset() const {
+    CUDA_CALLABLE_MEMBER frCoord xOffset() const {
       return offset.x();
     }
-    frCoord yOffset() const {
+    CUDA_CALLABLE_MEMBER frCoord yOffset() const {
       return offset.y();
     }
-    frOrient orient() const {
+    CUDA_CALLABLE_MEMBER frOrient orient() const {
       return ori;
     }
     // util
-    void updateXform(frPoint &size) {
+    CUDA_CALLABLE_MEMBER void updateXform(frPoint &size) {
       switch(orient()) {
         //case frcR0: == default
         case frcR90:
@@ -98,7 +103,7 @@ namespace fr {
           break;
       }
     }
-    void revert(frTransform &transformIn) {
+    CUDA_CALLABLE_MEMBER void revert(frTransform &transformIn) {
       frCoord resXOffset, resYOffset;
       frOrient resOrient;
       switch(ori) {

@@ -30,6 +30,11 @@
 #define _FR_POINT_H_
 
 #include "frBaseTypes.h"
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
 
 namespace fr {
   class frTransform;
@@ -37,38 +42,38 @@ namespace fr {
   class frPoint {
   public:
     // constructors
-    frPoint(): xCoord(0), yCoord(0) {}
-    frPoint(const frPoint &tmpPoint): xCoord(tmpPoint.xCoord), yCoord(tmpPoint.yCoord) {}
-    frPoint(const frCoord tmpX, const frCoord tmpY)
+    CUDA_CALLABLE_MEMBER frPoint(): xCoord(0), yCoord(0) {}
+    CUDA_CALLABLE_MEMBER frPoint(const frPoint &tmpPoint): xCoord(tmpPoint.xCoord), yCoord(tmpPoint.yCoord) {}
+    CUDA_CALLABLE_MEMBER frPoint(const frCoord tmpX, const frCoord tmpY)
       : xCoord(tmpX), yCoord(tmpY) {};
     // setters
-    void set(const frPoint &tmpPoint) {
+    CUDA_CALLABLE_MEMBER void set(const frPoint &tmpPoint) {
       xCoord = tmpPoint.xCoord;
       yCoord = tmpPoint.yCoord;
     }
-    void set(const frCoord tmpX, const frCoord tmpY) {
+    CUDA_CALLABLE_MEMBER void set(const frCoord tmpX, const frCoord tmpY) {
       xCoord = tmpX;
       yCoord = tmpY;
     }
-    void setX(const frCoord tmpX) {
+    CUDA_CALLABLE_MEMBER void setX(const frCoord tmpX) {
       xCoord = tmpX;
     }
-    void setY(const frCoord tmpY) {
+    CUDA_CALLABLE_MEMBER void setY(const frCoord tmpY) {
       yCoord = tmpY;
     }
     // getters
-    frCoord x() const {
+    CUDA_CALLABLE_MEMBER frCoord x() const {
       return xCoord;
     }
-    frCoord y() const {
+    CUDA_CALLABLE_MEMBER frCoord y() const {
       return yCoord;
     }
     // others
-    void transform(const frTransform &xform);
-    bool operator<(const frPoint &pIn) const {
+    CUDA_CALLABLE_MEMBER void transform(const frTransform &xform);
+    CUDA_CALLABLE_MEMBER bool operator<(const frPoint &pIn) const {
       return (xCoord == pIn.xCoord) ? (yCoord < pIn.yCoord) : (xCoord < pIn.xCoord);
     }
-    bool operator==(const frPoint &pIn) const {
+    CUDA_CALLABLE_MEMBER bool operator==(const frPoint &pIn) const {
       return (xCoord == pIn.xCoord) && (yCoord == pIn.yCoord);
     }
   protected:

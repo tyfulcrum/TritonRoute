@@ -32,6 +32,7 @@
 #include "frBaseTypes.h"
 
 namespace fr {
+  using namespace coret;
   class frPrefRoutingDir {
   public:
     // constructor
