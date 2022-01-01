@@ -38,7 +38,7 @@ using namespace fr;
 
 void FlexRP::init() {
   ProfileTask profile("RP:init");
-  bool enableOutput = false;
+  bool enableOutput = true;
 
   vector<pair<frCoord, frCoord> > forbiddenRanges;
   vector<vector<pair<frCoord, frCoord> > > eightForbiddenRanges(8, forbiddenRanges);

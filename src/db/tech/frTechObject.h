@@ -86,6 +86,9 @@ namespace fr {
     const std::vector<std::unique_ptr<frViaRuleGenerate> >& getViaRuleGenerates() const {
       return viaRuleGenerates;
     }
+    const std::vector<std::vector<std::vector<std::pair<frCoord, frCoord> > > >& getVia2ViaForbiddenOverlapLen() const {
+      return via2ViaForbiddenOverlapLen;
+    }
     const std::vector<std::vector<std::vector<std::pair<frCoord, frCoord> > > >& getVia2ViaForbiddenLen() const {
       return via2ViaForbiddenLen;
     }

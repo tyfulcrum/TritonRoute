@@ -9,6 +9,12 @@ namespace coret {
 #define cuWAVEFRONTBITSIZE (cuWAVEFRONTBUFFERSIZE * cuDIRBITSIZE)
 #define cuWAVEFRONTBUFFERHIGHMASK (111 << ((cuWAVEFRONTBUFFERSIZE - 1) * cuDIRBITSIZE))
 
+#ifdef __CUDACC__
+#define CUDA_CALLABLE_MEMBER __host__ __device__
+#else
+#define CUDA_CALLABLE_MEMBER
+#endif 
+
   using frLayerNum = int;
   using frCoord = int;
   using frUInt4 = unsigned int;
@@ -34,19 +40,19 @@ namespace coret {
   };
   class cuWavefrontGrid {
     public:
-      cuWavefrontGrid(): xIdx(-1), yIdx(-1), zIdx(-1), pathCost(0), cost(0), layerPathArea(0), 
+      CUDA_CALLABLE_MEMBER cuWavefrontGrid(): xIdx(-1), yIdx(-1), zIdx(-1), pathCost(0), cost(0), layerPathArea(0), 
       vLengthX(INT_MAX), 
       vLengthY(INT_MAX), 
       dist(0), prevViaUp(false), 
       tLength(INT_MAX), backTraceBuffer() {}
-      cuWavefrontGrid(int xIn, int yIn, int zIn, frCoord layerPathAreaIn, 
+      CUDA_CALLABLE_MEMBER cuWavefrontGrid(int xIn, int yIn, int zIn, frCoord layerPathAreaIn, 
           frCoord vLengthXIn, frCoord vLengthYIn,
           bool prevViaUpIn, frCoord tLengthIn,
           frCoord distIn, frCost pathCostIn, frCost costIn/*, frDirEnum preTurnDirIn*/): 
         xIdx(xIn), yIdx(yIn), zIdx(zIn), pathCost(pathCostIn), cost(costIn), 
         layerPathArea(layerPathAreaIn), vLengthX(vLengthXIn), vLengthY(vLengthYIn),
         dist(distIn), prevViaUp(prevViaUpIn), tLength(tLengthIn), backTraceBuffer() {}
-      cuWavefrontGrid(int xIn, int yIn, int zIn, frCoord layerPathAreaIn, 
+      CUDA_CALLABLE_MEMBER cuWavefrontGrid(int xIn, int yIn, int zIn, frCoord layerPathAreaIn, 
           frCoord vLengthXIn, frCoord vLengthYIn,
           bool prevViaUpIn, frCoord tLengthIn,
           frCoord distIn, frCost pathCostIn, frCost costIn, 
@@ -54,7 +60,7 @@ namespace coret {
         xIdx(xIn), yIdx(yIn), zIdx(zIn), pathCost(pathCostIn), cost(costIn), 
         layerPathArea(layerPathAreaIn), vLengthX(vLengthXIn), vLengthY(vLengthYIn),
         dist(distIn), prevViaUp(prevViaUpIn), tLength(tLengthIn), backTraceBuffer(backTraceBufferIn) {}
-      bool operator<(const cuWavefrontGrid &b) const {
+      CUDA_CALLABLE_MEMBER bool operator<(const cuWavefrontGrid &b) const {
         if (this->cost != b.cost) {
           return this->cost > b.cost; // prefer smaller cost
         } else {
@@ -70,64 +76,64 @@ namespace coret {
         }
       }
       // getters
-      frMIdx x() const {
+      CUDA_CALLABLE_MEMBER frMIdx x() const {
         return xIdx;
       }
-      frMIdx y() const {
+      CUDA_CALLABLE_MEMBER frMIdx y() const {
         return yIdx;
       }
-      frMIdx z() const {
+      CUDA_CALLABLE_MEMBER frMIdx z() const {
         return zIdx;
       }
-      frCost getPathCost() const {
+      CUDA_CALLABLE_MEMBER frCost getPathCost() const {
         return pathCost;
       }
-      frCost getCost() const {
+      CUDA_CALLABLE_MEMBER frCost getCost() const {
         return cost;
       }
-      auto getBackTraceBuffer() const {
+      CUDA_CALLABLE_MEMBER auto getBackTraceBuffer() const {
         return backTraceBuffer;
       }
-      frCoord getLayerPathArea() const {
+      CUDA_CALLABLE_MEMBER frCoord getLayerPathArea() const {
         return layerPathArea;
       }
-      frCoord getLength() const {
+      CUDA_CALLABLE_MEMBER frCoord getLength() const {
         return vLengthX;
       }
-      void getVLength(frCoord &vLengthXIn, frCoord &vLengthYIn) const {
+      CUDA_CALLABLE_MEMBER void getVLength(frCoord &vLengthXIn, frCoord &vLengthYIn) const {
         vLengthXIn = vLengthX;
         vLengthYIn = vLengthY;
       }
-      bool isPrevViaUp() const {
+      CUDA_CALLABLE_MEMBER bool isPrevViaUp() const {
         return prevViaUp;
       }
-      frCoord getTLength() const {
+      CUDA_CALLABLE_MEMBER frCoord getTLength() const {
         return tLength;
       }
       // setters
-      void addLayerPathArea(frCoord in) {
+      CUDA_CALLABLE_MEMBER void addLayerPathArea(frCoord in) {
         layerPathArea += in;
       }
-      void resetLayerPathArea() {
+      CUDA_CALLABLE_MEMBER void resetLayerPathArea() {
         layerPathArea = 0;
       }
 
-      void resetLength() {
+      CUDA_CALLABLE_MEMBER void resetLength() {
         vLengthX = 0;
         vLengthY = 0;
       }
-      void setPrevViaUp(bool in) {
+      CUDA_CALLABLE_MEMBER void setPrevViaUp(bool in) {
         prevViaUp = in;
       }
-      frDirEnum getLastDir() const {
+      CUDA_CALLABLE_MEMBER frDirEnum getLastDir() const {
         auto currDirVal = backTraceBuffer & 0b111u;
         return static_cast<frDirEnum>(currDirVal);
       }
-      bool isBufferFull() const {
+      CUDA_CALLABLE_MEMBER bool isBufferFull() const {
         unsigned int mask = cuWAVEFRONTBUFFERHIGHMASK;
         return any(mask & backTraceBuffer);
       }
-      frDirEnum shiftAddBuffer(const frDirEnum &dir) {
+      CUDA_CALLABLE_MEMBER frDirEnum shiftAddBuffer(const frDirEnum &dir) {
         auto retBS = static_cast<frDirEnum>((backTraceBuffer >> (cuWAVEFRONTBITSIZE - cuDIRBITSIZE)));
         backTraceBuffer <<= cuDIRBITSIZE;
         auto newBS = (unsigned)dir;
@@ -146,7 +152,7 @@ namespace coret {
       frCoord tLength; // length since last turn
       unsigned int backTraceBuffer;
     private:
-      bool any(unsigned int num) const{
+      CUDA_CALLABLE_MEMBER bool any(unsigned int num) const{
         auto size = sizeof(unsigned int);
         auto maxPow = 1<<(size*8-1);
         int i=0;

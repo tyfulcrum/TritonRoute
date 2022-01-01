@@ -29,6 +29,7 @@
 #ifndef _FLEX_GRID_GRAPH_H
 #define _FLEX_GRID_GRAPH_H
 
+#include <vector>
 #define GRIDGRAPHDRCCOSTSIZE 8
 
 #include "frBaseTypes.h"
@@ -38,6 +39,7 @@
 #include "dr/FlexWavefront.h"
 #include <map>
 #include <iostream>
+using std::vector;
 
 
 namespace fr {
@@ -51,7 +53,7 @@ namespace fr {
                   xCoords(), yCoords(), zCoords(), zHeights(),
                   ggDRCCost(0), ggMarkerCost(0), halfViaEncArea(nullptr),
                   via2viaMinLen(nullptr), via2viaMinLenNew(nullptr),
-                  via2turnMinLen(nullptr) {}
+                  via2turnMinLen(nullptr), gpu_pass(0), gpu_failed(0) {}
     // getters
     frTechObject* getTech() const {
       return design->getTech();
@@ -943,7 +945,7 @@ namespace fr {
                    const std::map<frLayerNum, frPrefRoutingDirEnum> &zMap,
                    const frBox &bbox, bool initDR);
     frCost getEstCost(const FlexMazeIdx &src, const FlexMazeIdx &dstMazeIdx1, const FlexMazeIdx &dstMazeIdx2, const frDirEnum &dir) const;
-    frCost getNextPathCost(const FlexWavefrontGrid &currGrid, const frDirEnum &dir) const;
+    frCost getNextPathCost(const FlexWavefrontGrid &currGrid, const frDirEnum &dir, bool test) const;
     frDirEnum getLastDir(const std::bitset<WAVEFRONTBITSIZE> &buffer) const;
     void traceBackPath(const FlexWavefrontGrid &currGrid, std::vector<FlexMazeIdx> &path, 
                        std::vector<FlexMazeIdx> &root, FlexMazeIdx &ccMazeIdx1, FlexMazeIdx &ccMazeIdx2) const;
@@ -954,6 +956,10 @@ namespace fr {
     FlexMazeIdx getTailIdx(const FlexMazeIdx &currIdx, const FlexWavefrontGrid &currGrid) const;
     void expand(FlexWavefrontGrid &currGrid, const frDirEnum &dir, const FlexMazeIdx &dstMazeIdx1, const FlexMazeIdx &dstMazeIdx2,
                 const frPoint &centerPt);
+  private:
+    void viaData(vector<int> &src, const vector<vector<vector<std::pair<frCoord, frCoord>>>> &data);
+    int gpu_pass;
+    int gpu_failed;
   };
 }
 

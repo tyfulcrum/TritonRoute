@@ -27,6 +27,7 @@
  */
 
 #include <memory>
+#include <utility>
 #include "dr/FlexGridGraph.h"
 #include "dr/FlexDR.h"
 #include "pathway/GPU-solver.hpp"
@@ -51,7 +52,7 @@ void FlexGridGraph::expand(FlexWavefrontGrid &currGrid, const frDirEnum &dir,
   FlexMazeIdx nextIdx(gridX, gridY, gridZ);
   // get cost
   nextEstCost = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
-  nextPathCost = getNextPathCost(currGrid, dir);  
+  nextPathCost = getNextPathCost(currGrid, dir, false);  
   if (enableOutput) {
     std::cout << "  expanding from (" << currGrid.x() << ", " << currGrid.y() << ", " << currGrid.z() 
               << ") [pathCost / totalCost = " << currGrid.getPathCost() << " / " << currGrid.getCost() << "] to "
@@ -199,22 +200,112 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   bool dirn = isExpandable(currGrid, frDirEnum::N);
   bool cuDirn = gpuSolver.cuIsExpanable(frDirEnum::N);
   */
+
+
+
+
+
+
+
+
+
+
+  vector<frUInt4> path_widths;
+  auto btm = getDesign()->getTech()->getBottomLayerNum();
+  auto top = getDesign()->getTech()->getTopLayerNum();
+  for (int i = btm; i <= top; ++i) {
+    auto pathWidth = getDesign()->getTech()->getLayer(i)->getWidth();
+    path_widths.push_back(pathWidth);
+  }
+
+  bool drWorker_ava = false;
+  int drIter = -1;
+  int ripupMode = -1;
+
+  if (drWorker) {
+    drIter = drWorker->getDRIter();
+    ripupMode = drWorker->getRipupMode();
+  }
+
+  // int *a = nullptr;
+  // a[32] = 3243;
   frMIdx gridX = currGrid.x();
   frMIdx gridY = currGrid.y();
   frMIdx gridZ = currGrid.z();
-  auto dir = frDirEnum::N;
+  auto dir = frDirEnum::E;
   getNextGrid(gridX, gridY, gridZ, dir);
   
   FlexMazeIdx nextIdx(gridX, gridY, gridZ);
+  //  [9][8] 
+  vector<int> via2ViaForbOverlapLen;
+  viaData(via2ViaForbOverlapLen, getTech()->getVia2ViaForbiddenOverlapLen());
+  // [9][8] 
+  vector<int> via2viaForbLen;
+  viaData(via2viaForbLen, getTech()->getVia2ViaForbiddenLen());
+  // [9][4] 
+  vector<int> viaForbiTurnLen;
+  viaData(viaForbiTurnLen, getTech()->getViaForbiddenTurnLen());
+
+  frCoord cuGrid_vLengthX, cuGrid_vLengthY;
+  currGrid.getVLength(cuGrid_vLengthX, cuGrid_vLengthY);
+
+  frPoint currPt;
+  getPoint(currPt, gridX, gridY);
+  frCoord currDist = abs(currPt.x() - centerPt.x()) + abs(currPt.y() - centerPt.y());
+
+  auto estc = getNextPathCost(currGrid, dir, true);
+  auto cuGrid = cuWavefrontGrid(currGrid.x(), currGrid.y(), currGrid.z(), 
+      currGrid.getLayerPathArea(), cuGrid_vLengthX, cuGrid_vLengthY, 
+      currGrid.isPrevViaUp(), currGrid.getTLength(), currDist, currGrid.getPathCost(), 
+      currGrid.getCost(),
+      currGrid.getBackTraceBuffer().to_ulong());
+  auto ddir =  currGrid.getLastDir();
+  auto hdir =  cuGrid.getLastDir();
+
+    int p_viaFOLen_size = via2ViaForbOverlapLen.size();
+    int p_viaFLen_size = via2viaForbLen.size();
+
+    int p_viaFTLen_size = (getTech()->getViaForbiddenTurnLen())[0].size();
+    // fmt::print("viaForbiTurnLen size: {}\n", p_viaFTLen_size);
+  //if (hdir != frDirEnum::N && hdir != frDirEnum::S) {
+  // fmt::print("CPU dir: {}, GPU dir: {}\n", hdir, ddir);
   auto gpu = GPUPathwaySolver();
   gpu.initialize(bits, prevDirs, srcs, guides, zDirs, xCoords, yCoords, zCoords,
-      zHeights, xCoords.size(), yCoords.size(), zCoords.size());
-  auto d_estc = gpu.test_estcost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
-  auto estc = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+      zHeights, path_widths, ggDRCCost, ggMarkerCost, 
+      via2ViaForbOverlapLen, via2viaForbLen, viaForbiTurnLen, 
+      drWorker, drIter, ripupMode, 
+    p_viaFOLen_size, p_viaFLen_size, p_viaFTLen_size);
+  /*
+  auto d_estc = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
+      currGrid.getLayerPathArea(), cuGrid_vLengthX, cuGrid_vLengthY, 
+      currGrid.isPrevViaUp(), currGrid.getTLength(), currDist, currGrid.getPathCost(), 
+      currGrid.getCost(), 
+      currGrid.getBackTraceBuffer().to_ulong());
+      */
+  auto d_estc = gpu.test_expand(dir, cuGrid);
+  auto tx = currGrid.x();
+  auto ty = currGrid.y();
+  auto tz = currGrid.z();
+
+
   if (d_estc == estc) {
-    fmt::print("GPU EstCost: {} in ({}, {}, {}) SUCCESS!\n", d_estc,  gridX, gridY, gridZ);
+    ++gpu_pass;
+    // fmt::print("SUCCESS in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
+  } else {
+    // ++gpu_failed;
+    // fmt::print("GPU FAIL!\n");
   }
   /*
+  else if (d_estc > estc) {
+    fmt::print("FAILED GREATER in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
+  } else {
+    fmt::print("FAILED LESS in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
+  }
+  auto d_estc = gpu.test_estcost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+  auto estc = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+  if (d_estc != estc) {
+    fmt::print("GPU EstCost: {} in ({}, {}, {}) FAILED!\n", d_estc,  gridX, gridY, gridZ);
+  }
   if (gridX == 36 && gridY == 31 && gridZ == 1) {
     auto gpu = GPUPathwaySolver();
     gpu.initialize(bits, prevDirs, srcs, guides, zDirs, xCoords, yCoords, zCoords,
@@ -232,53 +323,92 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
     fmt::print("GPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ, gpures);
     fmt::print("CPU isExpandable ({}, {}, {}) S result: {}\n", gridX, gridY, gridZ,  cpures);
   }
-  fmt::print("\n");
-  fmt::print("({}, {}, {}) ", gridX, gridY, gridZ);
-  fmt::print("\n");
   */
+  dir = frDirEnum::N;
+  auto cpures = isExpandable(currGrid, dir);
+  auto gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::N)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() + 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
+    gpu.test_expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no N" <<endl;
   // }
   // E
+  dir = frDirEnum::E;
+  cpures = isExpandable(currGrid, dir);
+  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::E)) {
    // cout << "(" << currGrid.x() + 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
+    gpu.test_expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no E" <<endl;
   // }
   // S
+  dir = frDirEnum::S;
+  cpures = isExpandable(currGrid, dir);
+  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::S)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() - 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
+    gpu.test_expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no S" <<endl;
   // }
   // W
+  dir = frDirEnum::W;
+  cpures = isExpandable(currGrid, dir);
+  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::W)) {
     //cout << "(" << currGrid.x() - 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
+    cuExpand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no W" <<endl;
   // }
   // U
+  dir = frDirEnum::U;
+  cpures = isExpandable(currGrid, dir);
+  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::U)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() + 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
+    gpu.test_expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no U" <<endl;
   // }
   // D
+  dir = frDirEnum::D;
+  cpures = isExpandable(currGrid, dir);
+  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  if (cpures == gpures) {
+    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  }
   if (isExpandable(currGrid, frDirEnum::D)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() - 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
+    gpu.test_expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no D" <<endl;
@@ -410,7 +540,7 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
   return;
 }
 
-/*inline*/ frCost FlexGridGraph::getNextPathCost(const FlexWavefrontGrid &currGrid, const frDirEnum &dir) const {
+/*inline*/ frCost FlexGridGraph::getNextPathCost(const FlexWavefrontGrid &currGrid, const frDirEnum &dir, bool test) const {
   // bool enableOutput = true;
   bool enableOutput = false;
   frMIdx gridX = currGrid.x();
@@ -421,11 +551,14 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
   auto currDir = currGrid.getLastDir();
   auto lNum = getLayerNum(currGrid.z());
   auto pathWidth = getDesign()->getTech()->getLayer(lNum)->getWidth();
+  // printf("CPU currDir: %d\n", currDir);
 
   if (currDir != dir && currDir != frDirEnum::UNKNOWN) {
     // original
     ++nextPathCost;
+    // printf("CPU Old cost add 1\n");
   }
+  auto oldcost = nextPathCost;
 
   // via2viaForbiddenLen enablement
   if (dir == frDirEnum::U || dir == frDirEnum::D) {
@@ -484,11 +617,19 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
       isTLengthViaUp = currGrid.isPrevViaUp();
       if (currDir == frDirEnum::W || currDir == frDirEnum::E) {
         currGrid.getVLength(tLength, tLengthDummy);
+        /*
+        auto vvv = getTech()->isViaForbiddenTurnLen(gridZ, !isTLengthViaUp, true, tLength);
+        printf("CPU isViaForbiddenTurnLen: %d\n", vvv);
+        */
         if (getTech()->isViaForbiddenTurnLen(gridZ, !isTLengthViaUp, true, tLength)) {
           isForbiddenTLen = true;
         }
       } else if (currDir == frDirEnum::S || currDir == frDirEnum::N) {
         currGrid.getVLength(tLengthDummy, tLength);
+        /*
+          auto vvv = getTech()->isViaForbiddenTurnLen(gridZ, !isTLengthViaUp, false, tLength);
+          printf("CPU isViaForbiddenTurnLen: %d\n", vvv);
+          */
         if (getTech()->isViaForbiddenTurnLen(gridZ, !isTLengthViaUp, false, tLength)) {
           isForbiddenTLen = true;
         }
@@ -510,6 +651,12 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
   bool blockCost  = isBlocked(gridX, gridY, gridZ, dir);
   bool guideCost  = hasGuide(gridX, gridY, gridZ, dir);
 
+  auto gridCostv = gridCost    ? GRIDCOST         * getEdgeLength(gridX, gridY, gridZ, dir) : 0;
+  auto drcCostv = drcCost     ? ggDRCCost        * getEdgeLength(gridX, gridY, gridZ, dir) : 0;
+  auto markerCostv = markerCost  ? ggMarkerCost     * getEdgeLength(gridX, gridY, gridZ, dir) : 0;
+  auto shapeCostv = shapeCost   ? SHAPECOST        * getEdgeLength(gridX, gridY, gridZ, dir) : 0;
+  auto blockCostv = blockCost   ? BLOCKCOST        * pathWidth * 20                          : 0;
+  auto guideCostv =!guideCost ? GUIDECOST        * getEdgeLength(gridX, gridY, gridZ, dir) : 0;
   // temporarily disable guideCost
   nextPathCost += getEdgeLength(gridX, gridY, gridZ, dir)
                   + (gridCost   ? GRIDCOST         * getEdgeLength(gridX, gridY, gridZ, dir) : 0)
@@ -527,6 +674,14 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
          <<isBlocked(gridX, gridY, gridZ, dir) <<"/"
          <<getEdgeLength(gridX, gridY, gridZ, dir) <<endl;
   }
+  /*
+  printf("CPU Costs %d: \n%d %d %d %d %d %d\n", nextPathCost, 
+      getEdgeLength(gridX, gridY, gridZ, dir), gridCost, drcCost, markerCost, 
+      shapeCost, blockCost, guideCost);
+      */
+  // if (test) {
+  // printf("CPU Costs %u: old cost: %u\n", nextPathCost, oldcost);
+  // }
   return nextPathCost;
 
 }
@@ -829,6 +984,9 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       if (enableOutput) {
         cout << "path found. stepCnt = " << stepCnt << "\n";
       }
+      fmt::print("=========Expanded Nodes========\n");
+      fmt::print("GPU Passed: {}, Failed: {}\n", gpu_pass, gpu_failed);
+      fmt::print("===============================\n");
       return true;
     } else {
       // expand and update wavefront
@@ -839,3 +997,32 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
   return false;
 }
 
+void FlexGridGraph::viaData(vector<int> &dest, const vector<vector<vector<std::pair<frCoord, frCoord>>>> &data) {
+  int total_size = 0;
+  int sizex = data.size();
+  int sizey = data[0].size();
+  // fmt::print("sizex: {}, sizey: {}\n", sizex, sizey);
+  for (auto &two_d_vec: data){
+    total_size += two_d_vec.size();
+  }
+  if (sizex * sizey != total_size) {
+    // fmt::print("Total size: {}, sizex: {}, sizey: {}\n", total_size, sizex, sizey);
+  }
+
+  auto flatvec = dest;
+  for (int i = 0; i < sizex; ++i) {
+    for (int j = 0; j < sizey; ++j) {
+      auto &p = data[i][j];
+      if (p.size() > 1) {
+      // fmt::print("size of data[{}][{}]: {}\n", i, j, p.size());
+      }
+      if (p.size() > 0) {
+        flatvec.push_back(p[0].first);
+        flatvec.push_back(p[0].second);
+      } else {
+        flatvec.push_back(-114514);
+        flatvec.push_back(-114514);
+      }
+    }
+  }
+}
