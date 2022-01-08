@@ -282,19 +282,16 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       currGrid.getCost(), 
       currGrid.getBackTraceBuffer().to_ulong());
       */
-  auto d_estc = gpu.test_expand(dir, cuGrid);
-  auto tx = currGrid.x();
-  auto ty = currGrid.y();
-  auto tz = currGrid.z();
+  // auto d_estc = gpu.test_expand(frDirEnum::D, grid
 
 
-  if (d_estc == estc) {
-    ++gpu_pass;
-    // fmt::print("SUCCESS in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
-  } else {
-    // ++gpu_failed;
-    // fmt::print("GPU FAIL!\n");
-  }
+  // if (d_estc == estc) {
+  //   ++gpu_pass;
+  //   // fmt::print("SUCCESS in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
+  // } else {
+  //   // ++gpu_failed;
+  //   // fmt::print("GPU FAIL!\n");
+  // }
   /*
   else if (d_estc > estc) {
     fmt::print("FAILED GREATER in ({}, {}, {}) CPU: {} GPU EstCost: {}\n", tx, ty, tz, estc, d_estc);
@@ -325,90 +322,125 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   }
   */
   dir = frDirEnum::N;
-  auto cpures = isExpandable(currGrid, dir);
-  auto gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  /*
+  auto cpu_isex = isExpandable(currGrid, dir);
+  auto gpu_isex = gpu.isEx(gridX, gridY, gridZ, dir);
+  */
+  auto const all_dirs = {frDirEnum::D, frDirEnum::E, frDirEnum::N, frDirEnum::S, 
+    frDirEnum::U, frDirEnum::W};
+  auto tx = currGrid.x();
+  auto ty = currGrid.y();
+  auto tz = currGrid.z();
+  auto const lastdir = currGrid.getLastDir();
+  for (auto dir: all_dirs) {
+    auto const gpu_value = gpu.isEx(tx, ty, tz, dir, lastdir);
+    auto const cpu_value = isExpandable(currGrid, dir);
+    std::map<frDirEnum, string> const dir_str = {
+      {frDirEnum::E, "East"}, 
+        {frDirEnum::W, "West"}, 
+        {frDirEnum::N, "North"}, 
+        {frDirEnum::S, "South"}, 
+        {frDirEnum::U, "Upper"}, 
+        {frDirEnum::D, "Down"}, 
+        {frDirEnum::UNKNOWN, "Unknow"}}; 
+    if (cpu_value == gpu_value) {
+      ++gpu_pass;
+    } else {
+      ++gpu_failed;
+      fmt::print("==========================\n");
+      fmt::print("At: {}, {}, {}, {}\n", tx, ty, tz, dir_str.at(dir));
+      // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
+    }
+    /*
+       auto cpu_value = isExpandable(currGrid, dir);
+       auto gpu_value = gpu.isEx(gridX, gridY, gridZ, dir, currGrid.getLastDir());
+       if (cpu_value == gpu_value) {
+       ++gpu_pass;
+       } else {
+       ++gpu_failed;
+       fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
+       }
+       */
   }
   if (isExpandable(currGrid, frDirEnum::N)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() + 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
-    gpu.test_expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // gpu.test_expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no N" <<endl;
   // }
   // E
-  dir = frDirEnum::E;
-  cpures = isExpandable(currGrid, dir);
-  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
-  }
+  // dir = frDirEnum::E;
+  // cpures = isExpandable(currGrid, dir);
+  // gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  // if (cpures == gpures) {
+  //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  // }
   if (isExpandable(currGrid, frDirEnum::E)) {
    // cout << "(" << currGrid.x() + 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
-    gpu.test_expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // gpu.test_expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no E" <<endl;
   // }
   // S
-  dir = frDirEnum::S;
-  cpures = isExpandable(currGrid, dir);
-  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
-  }
+  // dir = frDirEnum::S;
+  // cpures = isExpandable(currGrid, dir);
+  // gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  // if (cpures == gpures) {
+  //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  // }
   if (isExpandable(currGrid, frDirEnum::S)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() - 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
-    gpu.test_expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // gpu.test_expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no S" <<endl;
   // }
   // W
-  dir = frDirEnum::W;
-  cpures = isExpandable(currGrid, dir);
-  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
-  }
+  // dir = frDirEnum::W;
+  // cpures = isExpandable(currGrid, dir);
+  // gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  // if (cpures == gpures) {
+  //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  // }
   if (isExpandable(currGrid, frDirEnum::W)) {
     //cout << "(" << currGrid.x() - 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
-    cuExpand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // cuExpand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no W" <<endl;
   // }
   // U
-  dir = frDirEnum::U;
-  cpures = isExpandable(currGrid, dir);
-  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
-  }
+  // dir = frDirEnum::U;
+  // cpures = isExpandable(currGrid, dir);
+  // gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  // if (cpures == gpures) {
+  //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  // }
   if (isExpandable(currGrid, frDirEnum::U)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() + 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
-    gpu.test_expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // gpu.test_expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no U" <<endl;
   // }
   // D
-  dir = frDirEnum::D;
-  cpures = isExpandable(currGrid, dir);
-  gpures = gpu.isEx(gridX, gridY, gridZ, dir);
-  if (cpures == gpures) {
-    fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
-  }
+  // dir = frDirEnum::D;
+  // cpures = isExpandable(currGrid, dir);
+  // gpures = gpu.isEx(gridX, gridY, gridZ, dir);
+  // if (cpures == gpures) {
+  //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
+  // }
   if (isExpandable(currGrid, frDirEnum::D)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() - 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
-    gpu.test_expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
+    // gpu.test_expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
   // else {
   //   std::cout <<"no D" <<endl;
@@ -707,6 +739,7 @@ void FlexGridGraph::getPrevGrid(frMIdx &gridX, frMIdx &gridY, frMIdx &gridZ, con
   frMIdx gridY = currGrid.y();
   frMIdx gridZ = currGrid.z();
   bool hg = hasEdge(gridX, gridY, gridZ, dir);
+  // fmt::print("CPU hasEdge: {}\n", hg);
   if (enableOutput) {
     if (!hasEdge(gridX, gridY, gridZ, dir)) {
       cout <<"no edge@(" <<gridX <<", " <<gridY <<", " <<gridZ <<") " <<(int)dir <<endl;
@@ -984,7 +1017,7 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       if (enableOutput) {
         cout << "path found. stepCnt = " << stepCnt << "\n";
       }
-      fmt::print("=========Expanded Nodes========\n");
+      fmt::print("=========isEx GPU========\n");
       fmt::print("GPU Passed: {}, Failed: {}\n", gpu_pass, gpu_failed);
       fmt::print("===============================\n");
       return true;
