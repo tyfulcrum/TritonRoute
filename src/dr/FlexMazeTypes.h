@@ -80,10 +80,12 @@ namespace fr {
       return (xIdx == rhs.xIdx && yIdx == rhs.yIdx && zIdx == rhs.zIdx);
     }
 
-    CUDA_CALLABLE_MEMBER friend std::ostream& operator<<(std::ostream& os, const FlexMazeIdx &mIdx) {
+#ifndef __CUDACC__
+    friend std::ostream& operator<<(std::ostream& os, const FlexMazeIdx &mIdx) {
       os <<"(" <<mIdx.x() <<", " <<mIdx.y() <<", " <<mIdx.z() <<")";
       return os;
     }
+#endif
 
   protected:
     frMIdx xIdx;

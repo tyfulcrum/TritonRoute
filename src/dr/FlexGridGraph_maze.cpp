@@ -241,7 +241,9 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   viaData(via2ViaForbOverlapLen, getTech()->getVia2ViaForbiddenOverlapLen());
   // [9][8] 
   vector<int> via2viaForbLen;
+  // fmt::print("=============HOST DATA BEGIN===========\n");
   viaData(via2viaForbLen, getTech()->getVia2ViaForbiddenLen());
+  // fmt::print("=============HOST DATA END===========\n");
   // [9][4] 
   vector<int> viaForbiTurnLen;
   viaData(viaForbiTurnLen, getTech()->getViaForbiddenTurnLen());
@@ -253,7 +255,6 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   getPoint(currPt, gridX, gridY);
   frCoord currDist = abs(currPt.x() - centerPt.x()) + abs(currPt.y() - centerPt.y());
 
-  auto estc = getNextPathCost(currGrid, dir, true);
   auto cuGrid = cuWavefrontGrid(currGrid.x(), currGrid.y(), currGrid.z(), 
       currGrid.getLayerPathArea(), cuGrid_vLengthX, cuGrid_vLengthY, 
       currGrid.isPrevViaUp(), currGrid.getTLength(), currDist, currGrid.getPathCost(), 
@@ -274,7 +275,13 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       zHeights, path_widths, ggDRCCost, ggMarkerCost, 
       via2ViaForbOverlapLen, via2viaForbLen, viaForbiTurnLen, 
       drWorker, drIter, ripupMode, 
-    p_viaFOLen_size, p_viaFLen_size, p_viaFTLen_size);
+    p_viaFOLen_size, p_viaFLen_size, p_viaFTLen_size, 
+    getTech()->getVia2ViaForbiddenLen(), getTech()->getVia2ViaForbiddenLen(), 
+    getTech()->getViaForbiddenTurnLen(), DBPROCESSNODE, 
+    getDesign()->getTech()->getTopLayerNum());
+  // gpu.printDeviceOverlapInfo();
+  // auto const estc = getNextPathCost(currGrid, dir, true);
+
   /*
   auto d_estc = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
       currGrid.getLayerPathArea(), cuGrid_vLengthX, cuGrid_vLengthY, 
@@ -328,13 +335,15 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   */
   auto const all_dirs = {frDirEnum::D, frDirEnum::E, frDirEnum::N, frDirEnum::S, 
     frDirEnum::U, frDirEnum::W};
-  auto tx = currGrid.x();
-  auto ty = currGrid.y();
-  auto tz = currGrid.z();
+  auto const tx = currGrid.x();
+  auto const ty = currGrid.y();
+  auto const tz = currGrid.z();
   auto const lastdir = currGrid.getLastDir();
   for (auto dir: all_dirs) {
-    auto const gpu_value = gpu.isEx(tx, ty, tz, dir, lastdir);
-    auto const cpu_value = isExpandable(currGrid, dir);
+    auto const gpu_value = getEstCost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+    auto const cpu_value = gpu.test_estcost(nextIdx, dstMazeIdx1, dstMazeIdx2, dir);
+    // auto const gpu_value = gpu.isEx(tx, ty, tz, dir, lastdir);
+    // auto const cpu_value = isExpandable(currGrid, dir);
     std::map<frDirEnum, string> const dir_str = {
       {frDirEnum::E, "East"}, 
         {frDirEnum::W, "West"}, 
@@ -1017,7 +1026,7 @@ bool FlexGridGraph::cuSearch(vector<FlexMazeIdx> &connComps, drPin* nextPin, vec
       if (enableOutput) {
         cout << "path found. stepCnt = " << stepCnt << "\n";
       }
-      fmt::print("=========isEx GPU========\n");
+      fmt::print("=========get EstCost GPU========\n");
       fmt::print("GPU Passed: {}, Failed: {}\n", gpu_pass, gpu_failed);
       fmt::print("===============================\n");
       return true;
@@ -1047,9 +1056,9 @@ void FlexGridGraph::viaData(vector<int> &dest, const vector<vector<vector<std::p
     for (int j = 0; j < sizey; ++j) {
       auto &p = data[i][j];
       if (p.size() > 1) {
-      // fmt::print("size of data[{}][{}]: {}\n", i, j, p.size());
       }
       if (p.size() > 0) {
+        // fmt::print("[{}][{}]: ({}, {})\n", i, j, p[0].first, p[0].second);
         flatvec.push_back(p[0].first);
         flatvec.push_back(p[0].second);
       } else {
