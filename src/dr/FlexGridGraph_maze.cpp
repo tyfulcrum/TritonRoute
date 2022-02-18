@@ -277,8 +277,8 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       drWorker, drIter, ripupMode, 
     p_viaFOLen_size, p_viaFLen_size, p_viaFTLen_size, 
     getTech()->getVia2ViaForbiddenLen(), getTech()->getVia2ViaForbiddenLen(), 
-    getTech()->getViaForbiddenTurnLen(), DBPROCESSNODE, 
-    getDesign()->getTech()->getTopLayerNum());
+    getTech()->getViaForbiddenTurnLen(), *halfViaEncArea,
+    DBPROCESSNODE, getDesign()->getTech()->getTopLayerNum());
   // gpu.printDeviceOverlapInfo();
   // auto const estc = getNextPathCost(currGrid, dir, true);
 
@@ -338,17 +338,24 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   auto const ty = currGrid.y();
   auto const tz = currGrid.z();
   auto const lastdir = currGrid.getLastDir();
-  /*
+
   for (auto const &dir: all_dirs) {
-    auto const cpu_value = getNextPathCost(currGrid, dir, false);  
-    fmt::print("CPU value: {}\n", cpu_value);
-    auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
-        currGrid.getLayerPathArea(), cuGrid_vLengthX, cuGrid_vLengthY, 
-        currGrid.isPrevViaUp(), currGrid.getTLength(), currDist, currGrid.getPathCost(), 
-        currGrid.getCost(), 
-        currGrid.getBackTraceBuffer().to_ulong());
-    // auto const gpu_value = gpu.isEx(tx, ty, tz, dir, lastdir);
-    // auto const cpu_value = isExpandable(currGrid, dir);
+    int next_gridx = currGrid.x();
+    int next_gridy = currGrid.y();
+    int next_gridZ = currGrid.z();
+    getNextGrid(next_gridx, next_gridy, next_gridZ, dir);
+    /*
+    auto const cpu_value1 = getHalfViaEncArea(currGrid.z(), false);  
+    auto const gpu_value1 = gpu.dtest_half(currGrid.z(), false);
+    auto const cpu_value2 = getHalfViaEncArea(next_gridZ, true);
+    auto const gpu_value2 = gpu.dtest_half(next_gridZ, true);
+    */
+    auto const cpu_value = (dir == frDirEnum::U) ? 
+      getHalfViaEncArea(currGrid.z(), false) :
+      getHalfViaEncArea(gridZ, true);
+    auto const gpu_value = (dir == frDirEnum::U) ?
+      gpu.dtest_half(currGrid.z(), false) :
+      gpu.dtest_half(gridZ, true);
     std::map<frDirEnum, string> const dir_str = {
       {frDirEnum::E, "East"}, 
         {frDirEnum::W, "West"}, 
@@ -358,18 +365,20 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
         {frDirEnum::D, "Down"}, 
         {frDirEnum::UNKNOWN, "Unknow"}}; 
     if (cpu_value == gpu_value) {
-      fmt::print("CPU Value: {}, GPU Value: {}\n", cpu_value, gpu_value);
+      // fmt::print("CPU Value: {}, GPU Value: {}\n", cpu_value, gpu_value);
       ++gpu_pass;
     } else {
       ++gpu_failed;
       fmt::print("==========================\n");
-      fmt::print("At: {}, {}, {}, {}\n", tx, ty, tz, dir_str.at(dir));
+      // fmt::print("At: {}, {}, {}, {}\n", tx, ty, tz, dir_str.at(dir));
+      fmt::print("At: {}, {}\n", next_gridZ, dir_str.at(dir));
+      fmt::print("CPU Value: {};\nGPU Value: {}\n", cpu_value, gpu_value); 
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
   }
-  */
   if (isExpandable(currGrid, frDirEnum::N)) {
     //cout << "(" << currGrid.x() << "," << currGrid.y() + 1 << "," << currGrid.z() << ") expendable! " << endl;
+    /*
     auto const dir = frDirEnum::N;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -394,6 +403,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       fmt::print("At: {}, {}, {}, {}\n", tx, ty, tz, dir_str.at(dir));
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
+    */
     expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
     // gpu.test_expand(currGrid, frDirEnum::N, dstMazeIdx1, dstMazeIdx2, centerPt);
   }
@@ -408,6 +418,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
   // }
   if (isExpandable(currGrid, frDirEnum::E)) {
+    /*
     auto const dir = frDirEnum::E;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -433,6 +444,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
  
+    */
    // cout << "(" << currGrid.x() + 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
     // gpu.test_expand(currGrid, frDirEnum::E, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -448,6 +460,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
   // }
   if (isExpandable(currGrid, frDirEnum::S)) {
+    /*
     auto const dir = frDirEnum::S;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -473,6 +486,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
  
+    */
 
     //cout << "(" << currGrid.x() << "," << currGrid.y() - 1 << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::S, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -489,6 +503,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
   // }
   if (isExpandable(currGrid, frDirEnum::W)) {
+    /*
     auto const dir = frDirEnum::W;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -514,6 +529,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
  
+    */
     //cout << "(" << currGrid.x() - 1 << "," << currGrid.y() << "," << currGrid.z() << ") expendable! " << endl;
     expand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
     // cuExpand(currGrid, frDirEnum::W, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -529,6 +545,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
   // }
   if (isExpandable(currGrid, frDirEnum::U)) {
+    /*
     auto const dir = frDirEnum::U;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -554,6 +571,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
  
+    */
 
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() + 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::U, dstMazeIdx1, dstMazeIdx2, centerPt);
@@ -570,6 +588,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
   //   fmt::print("GPU result in ({}, {}, {}) FAILED!\n", gridX, gridY, gridZ);
   // }
   if (isExpandable(currGrid, frDirEnum::D)) {
+    /*
     auto const dir = frDirEnum::D;
     auto const cpu_value = getNextPathCost(currGrid, dir, false);  
     auto const gpu_value = gpu.test_npCost(dir, currGrid.x(), currGrid.y(), currGrid.z(), 
@@ -595,6 +614,7 @@ void FlexGridGraph::expandWavefront(FlexWavefrontGrid &currGrid, const FlexMazeI
       // fmt::print("GPU result in ({}, {}, {}, {}) FAILED!\n", gridX, gridY, gridZ, dir);
     }
  
+    */
     //cout << "(" << currGrid.x() << "," << currGrid.y() << "," << currGrid.z() - 1 << ") expendable! " << endl;
     expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
     // gpu.test_expand(currGrid, frDirEnum::D, dstMazeIdx1, dstMazeIdx2, centerPt);
